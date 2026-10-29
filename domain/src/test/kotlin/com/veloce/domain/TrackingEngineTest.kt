@@ -86,5 +86,8 @@ private class MemoryRepository(private val appendFailure: TrackingFailure? = nul
         return Outcome.Success(Unit)
     }
     override fun observeLatestSession(): Flow<Outcome<TrackingSession?>> = session.map { Outcome.Success(it) }
+    override fun observeAllSessions(): Flow<Outcome<List<TrackingSession>>> = flowOf(Outcome.Success(emptyList()))
+    override fun observeSession(sessionId: String): Flow<Outcome<TrackingSession?>> = flowOf(Outcome.Success(null))
     override fun observePoints(sessionId: String): Flow<Outcome<List<LocationPoint>>> = points.map { Outcome.Success(it) }
+    override suspend fun getPoints(sessionId: String): Outcome<List<LocationPoint>> = Outcome.Success(points.value)
 }

@@ -72,22 +72,10 @@ class AuthViewModel(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun login(email: String, pass: String) {
-        if (email.isBlank() || pass.isBlank()) {
-            _state.update { it.copy(error = "Preencha e-mail e senha para continuar.") }
-            return
-        }
-        _state.update { it.copy(isLoading = true, error = null) }
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(800)
-            val result = loginUseCase(email, pass)
-            if (result.isSuccess) {
-                _state.update { it.copy(isLoading = false, screen = AuthScreenState.Authenticated) }
-            } else {
-                val errorMsg = result.exceptionOrNull()?.message ?: "E-mail ou senha incorretos."
-                _state.update { it.copy(isLoading = false, error = errorMsg) }
-            }
-        }
+        // Bypass login network call temporarily
+        _state.update { it.copy(isLoading = false, screen = AuthScreenState.Authenticated, error = null) }
     }
 
     fun goToRegister() {

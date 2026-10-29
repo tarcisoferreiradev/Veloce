@@ -1,1 +1,33 @@
-{"version":8,"name":"Veloce Offline","sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"#17221c"}}]}
+{
+  "version": 8,
+  "name": "Veloce Light Map Style",
+  "sources": {
+    "carto-positron": {
+      "type": "raster",
+      "tiles": [
+        "https://a.basemaps.cartocdn.com/rastertiles/positron/{z}/{x}/{y}@2x.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/positron/{z}/{x}/{y}@2x.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/positron/{z}/{x}/{y}@2x.png",
+        "https://d.basemaps.cartocdn.com/rastertiles/positron/{z}/{x}/{y}@2x.png"
+      ],
+      "tileSize": 256,
+      "attribution": "© OpenStreetMap contributors, © CARTO"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#F8F9FA"
+      }
+    },
+    {
+      "id": "positron-layer",
+      "type": "raster",
+      "source": "carto-positron",
+      "minzoom": 0,
+      "maxzoom": 20
+    }
+  ]
+}

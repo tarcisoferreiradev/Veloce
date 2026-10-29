@@ -1,11 +1,13 @@
 package com.veloce.presentation.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,57 +23,131 @@ fun TrackingScreen(
     state: TrackingUiState, permissionMessage: String?,
     onStart: () -> Unit, onStop: () -> Unit, onSettings: () -> Unit, onAppSettings: () -> Unit,
 ) {
-    Scaffold { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("veloce", fontSize = 32.sp, fontWeight = FontWeight.Black)
-                AssistChip(onClick = {}, label = { Text(if (state.running) "● GRAVANDO" else "OFFLINE") })
+    Box(Modifier.fillMaxSize()) {
+        // Fullscreen map in background
+        RouteMap(state.route.points, Modifier.fillMaxSize())
+
+        if (state.running) {
+            // ==================== RUNNING STATE (ATIVIDADE EM ANDAMENTO) ====================
+            // Top Header: Distance and Time with a subtle top vignette gradient effect for legibility
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.65f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "DISTÂNCIA • km",
+                        style = MaterialTheme.typography.labelSmall.copy(color = Color.White.copy(alpha = 0.8f))
+                    )
+                    Text(
+                        String.format(Locale("pt", "BR"), "%.2f", state.route.distanceMeters / 1000),
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 38.sp,
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineLarge.copy(fontFeatureSettings = "tnum")
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "TEMPO",
+                        style = MaterialTheme.typography.labelSmall.copy(color = Color.White.copy(alpha = 0.8f))
+                    )
+                    Text(
+                        formatDuration(state.elapsedSeconds),
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 26.sp,
+                        color = Color.White,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum")
+                    )
+                }
             }
-            Text(when {
-                state.busy -> "Salvando atividade…"
-                state.running -> "Seu movimento, seu ritmo."
-                state.interrupted -> "Atividade interrompida. Dados gravados preservados."
-                state.session != null -> "Última atividade salva neste dispositivo."
-                else -> "Tudo pronto para sair?"
-            }, style = MaterialTheme.typography.titleMedium)
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Metric("DISTÂNCIA • km", String.format(Locale("pt", "BR"), "%.2f", state.route.distanceMeters / 1000), 48)
-                    HorizontalDivider()
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Metric("RITMO MÉDIO • min/km", formatPace(state.pace), 24)
-                        Metric("TEMPO", formatDuration(state.elapsedSeconds), 24)
+
+            // Bottom Action Bar: Only Finalizar Atividade button
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            ) {
+                Button(
+                    onClick = onStop,
+                    enabled = !state.busy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
+                ) {
+                    Text(
+                        "Finalizar atividade",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        } else {
+            // ==================== IDLE STATE (PRONTO PARA INICIAR) ====================
+            // Only the "Iniciar nova atividade" button positioned slightly lower down
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val error = permissionMessage ?: state.failure?.message()
+                if (error != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
+                        shape = MaterialTheme.shapes.medium,
+                        tonalElevation = 6.dp
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(error, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                            Row {
+                                TextButton(onClick = onSettings) { Text("Ativar GPS") }
+                                TextButton(onClick = onAppSettings) { Text("Permissões") }
+                            }
+                        }
                     }
                 }
-            }
-            Card(Modifier.fillMaxWidth().height(300.dp)) { RouteMap(state.route.points, Modifier.fillMaxSize()) }
-            Text(if (state.route.points.isEmpty()) "Aguardando posição GPS precisa. Procure um local aberto."
-                else "${state.route.points.size} pontos salvos • rota disponível sem internet",
-                style = MaterialTheme.typography.bodySmall)
-            Text("Mapa offline da rota • sem mapa de ruas", style = MaterialTheme.typography.labelSmall)
-            val error = permissionMessage ?: state.failure?.message()
-            if (error != null) {
-                Text(error, color = MaterialTheme.colorScheme.error)
-                Row {
-                    TextButton(onClick = onSettings) { Text("Ativar GPS") }
-                    TextButton(onClick = onAppSettings) { Text("Permissões") }
+
+                Button(
+                    onClick = onStart,
+                    enabled = !state.busy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
+                ) {
+                    Text(
+                        "Iniciar nova atividade",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
-            Button(onClick = if (state.running) onStop else onStart, enabled = !state.busy,
-                modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Text(if (state.running) "Finalizar atividade" else "Iniciar nova atividade")
-            }
         }
-    }
-}
-
-@Composable
-private fun Metric(label: String, value: String, size: Int) {
-    Column {
-        Text(label, style = MaterialTheme.typography.labelSmall)
-        Text(value, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold,
-            fontSize = size.sp, style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum"))
     }
 }
 

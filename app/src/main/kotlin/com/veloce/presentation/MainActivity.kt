@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
@@ -93,7 +94,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) { innerPadding ->
-                        Box(modifier = androidx.compose.ui.Modifier.padding(innerPadding)) {
+                        Box(modifier = androidx.compose.ui.Modifier.padding(top = 0.dp, bottom = innerPadding.calculateBottomPadding())) {
                             when (selectedTab) {
                                 0 -> {
                                     val model: TrackingViewModel = viewModel(factory = TrackingViewModel.Factory(graph.repository, graph.controller))
@@ -102,9 +103,19 @@ class MainActivity : ComponentActivity() {
                                     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
                                         if (hasPreciseLocation()) {
                                             permissionMessage = null
-                                            model.start()
                                         } else permissionMessage = "Permita localização precisa para registrar a rota. Se a permissão foi bloqueada, abra as configurações do app."
                                     }
+                                    
+                                    LaunchedEffect(Unit) {
+                                        if (!hasPreciseLocation()) {
+                                            permissions.launch(buildList {
+                                                add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                                                add(Manifest.permission.ACCESS_FINE_LOCATION)
+                                                if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+                                            }.toTypedArray())
+                                        }
+                                    }
+
                                     TrackingScreen(state, permissionMessage, onStart = {
                                         if (hasPreciseLocation() && (Build.VERSION.SDK_INT < 33 ||
                                             ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)) {
